@@ -1,0 +1,17 @@
+tensorboard --logdir models/fullobs_collect_treasure/lh-01/run7/logs
+python evaluate.py far_treasure 100-20000-01 1
+conda activate ddsa
+python main.py fullobs_collect_treasure 106treasure-100step-30000epi
+
+#20201026 36treasure，37000次
+python main.py fullobs_collect_treasure 36treasure-100step-50000epi
+python evaluate.py fullobs_collect_treasure 36treasure-100step-50000epi 1
+
+
+#20201028 尝试搭一个ddsa的东西
+python main.py fullobs_collect_treasure ddsa-base
+python evaluate.py fullobs_collect_treasure ddsa-base 2
+
+#20201030 现在在用的指令
+conda activate ddsa
+python evaluate.py fullobs_collect_treasure 36tr-100step-50000epi 1
