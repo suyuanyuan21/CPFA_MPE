@@ -21,7 +21,7 @@ def run(config):
     attention_sac = AttentionSAC.init_from_save(model_path)
     env = make_env(config.env_id, discrete_action=attention_sac.discrete_action)
     attention_sac.prep_rollouts(device='cpu')
-    ifi = 3 / config.fps  # inter-frame interval
+    ifi = 10 / config.fps  # inter-frame interval
   
 
 

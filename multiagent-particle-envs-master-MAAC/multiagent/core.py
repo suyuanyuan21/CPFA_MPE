@@ -1,5 +1,6 @@
 import numpy as np
 import seaborn as sns
+import math
 
 # physical/external base state of all entites
 class EntityState(object):
@@ -102,8 +103,15 @@ class Agent(Entity):
         # script behavior to execute
         self.action_callback = None
         self.recover = True
-        self.turn_n = 0
-        self.t_i = 0
+        #agent行为的状态，0 and 1：向某一方向移动(0随机1信息)；2：无信息搜索；3：有信息搜索；4：返回nest
+        self.action_state = 0
+        self.angle = math.degrees(0)
+        self.search_time = 0
+        self.switch_to_search = 0.5##probability of swithching to search 
+        self.return_nest = 0.5#Probability of returning to nest
+        self.rsf = 0.5#Rate of site fidelity
+        self.usv = 1#Uninformed search variation
+        self.isd = 1#Rate of informed search decay
 
 # multi-agent world
 class World(object):

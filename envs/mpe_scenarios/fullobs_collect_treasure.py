@@ -34,9 +34,6 @@ class Scenario(BaseScenario):
             agent.silent = True
             agent.ghost = True
             agent.holding = None
-            agent.recover = True
-            agent.t_i = 0
-            agent.turn_n = 0
             agent.size = 0.017 if agent.collector else 0.1
             agent.accel = 1.844
             agent.initial_mass = 1.0 if agent.collector else 2.25
@@ -77,7 +74,7 @@ class Scenario(BaseScenario):
         for l in world.landmarks:
             if l.alive:
                 for a in self.collectors(world):
-                    if a.holding is None and self.is_collision(l, a, world) and a.recover:
+                    if a.holding is None and self.is_collision(l, a, world):
                         l.alive = False
                         a.holding = l.type
                         a.color = 0.85 * l.color
@@ -99,17 +96,17 @@ class Scenario(BaseScenario):
         for i, agent in enumerate(world.agents):
             #agent.state.p_pos = np.random.uniform(low=-1, high=1,
                                                   #size=world.dim_p)
+            agent.state.rep_pos = np.random.uniform(low=-1, high=1,size=2)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
             agent.holding = None
-            agent.recover = True
-            agent.t_i = 0
-            agent.turn_n = 0
+            agent.angle = 0
+            agent.action_state = 0
             if agent.collector:
                 agent.color = np.array([0.85, 0.85, 0.85])
-                #agent.state.p_pos = np.random.uniform(low=-0.5, high=0.5,
-                #                                  size=world.dim_p)
-                agent.state.p_pos = np.array([agent.size*(2*i + 1) + 0.1,-0.1])
+                agent.state.p_pos = np.random.uniform(low=-0.1, high=0.1,
+                                                  size=world.dim_p)
+                #agent.state.p_pos = np.array([agent.size*(2*i + 1) + 0.1,-0.1])
                 #0.1 是deposit的size
             else:
                 agent.state.p_pos = np.array([0.0,0.0])

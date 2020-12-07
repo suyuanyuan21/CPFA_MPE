@@ -160,6 +160,31 @@ class MultiAgentEnv(gym.Env):
         #now_action: [array([0., 0., 0., 1., 0.], dtype=float32)]
 
         if agent.movable:
+            if (agent.action_state == 0):#travel1
+                if(np.random.uniform(0,1) < agent.switch_to_search):
+                    agent.action_state = 2
+            elif(agent.action_state == 1):#travel2
+                if(agent.recover == True):
+                    agent.action_state = 3
+            elif(agent.action_state == 2 or agent.action_state == 3):#search1&2
+                if(agent.holding != None or np.random.uniform(0,1) < agent.return_nest):
+                    agent.action_state = 4
+            else:#return
+                if(agent.recover):
+                            agent.state.rep_pos = np.zeros(self.world.dim_p)
+                            agent.state.rep_pos += agent.state.p_pos
+                            agent.recover = False
+                if(agent.holding == None):
+                    agent.search_time = 0
+                    if(np.random.uniform(0,1) < agent.rsf):
+                        #先简单的写一个判断
+                        agent.action_state = 1
+                    else:
+                        agent.action_state = 0
+                        agent.state.rep_pos = np.random.uniform(low=-1, high=1,
+                                                    size=2)
+            #print("agent_state:",agent.action_state)
+
             # physical action
             if self.discrete_action_input:
                 agent.action.u = np.zeros(self.world.dim_p)
@@ -168,41 +193,28 @@ class MultiAgentEnv(gym.Env):
                 #action[0]: [[ 0.  1.],[-1.  0.],[ 0. -1.],[ 1.  0.]]
                 if self.discrete_action_space:
                     #True
-                    #print("turn_n:",self.turn_n)
                     #print("agent.i:",agent.i)
-                    #print("agent%d t_i:"%agent.i,self.t_i[agent.i])
-                    if(agent.holding == None and agent.recover):
-                        if(agent.turn_n == 0):
-                            if(agent.t_i == (agent.turn_n+1)*6+agent.i):
-                                agent.turn_n += 1
-                        elif(agent.turn_n <= 2):
-                            if(agent.t_i == (agent.turn_n+1)*6+agent.i+2*agent.turn_n*agent.i):
-                                agent.turn_n += 1
-                        elif (agent.turn_n % 2 == 1):
-                            if(agent.t_i == ((agent.turn_n+1)*6+agent.i+(((agent.turn_n-1)**2/4)*3)+2*agent.turn_n*agent.i)):
-                                agent.turn_n += 1
-                        else:
-                            if(agent.t_i == ((agent.turn_n+1)*6+agent.i+(agent.turn_n/2-1)*(agent.turn_n/2)*3+2*agent.turn_n*agent.i)):
-                                agent.turn_n += 1
-                        agent.t_i += 1
-                        agent.action.u += action[0][(agent.turn_n%4)]
-                    elif (agent.holding == None and not agent.recover):
-                        #print("linalg:",np.linalg.norm(agent.state.rep_pos))
+                    if(agent.action_state == 0 or agent.action_state == 1):
+                        #agent.action.u += action[0][0]
                         agent.action.u += np.array([(agent.state.rep_pos[0]/np.linalg.norm(agent.state.rep_pos))
                                                    ,(agent.state.rep_pos[1]/np.linalg.norm(agent.state.rep_pos))])
-                        if((math.fabs(agent.state.p_pos[0] - agent.state.rep_pos[0]) < 0.0000001) and 
-                            (math.fabs(agent.state.p_pos[1] - agent.state.rep_pos[1]) < 0.0000001)):
-                            agent.state.rep_pos = np.zeros(self.world.dim_p)
-                            agent.recover = True
-                        #print("agent%d.state.rep_pos:"%agent.i,agent.state.rep_pos)
-                        #print("agent%d.state.p_pos:"%agent.i,agent.state.p_pos)
-                    else:
-                        #self.turn_n[agent.i] = 0
-                        if(agent.recover):
-                            agent.state.rep_pos = np.zeros(self.world.dim_p)
-                            agent.state.rep_pos += agent.state.p_pos
-                            agent.recover = False
-                        #print("agent%d.state.rep_pos:"%agent.i,agent.state.rep_pos)
+                        #print("agent.action.u:",agent.action.u) 
+                    elif (agent.holding == None and agent.action_state == 2):
+                        #search1--uninformed
+                        rand = np.random.normal(loc=0,scale=agent.usv)#正态分布
+                        angle1 = math.degrees(rand)
+                        agent.angle += angle1
+                        agent.action.u += np.array([math.sin(agent.angle),math.cos(agent.angle)])
+                    elif (agent.holding == None and agent.action_state == 3):
+                        #search2--informed
+                        agent.search_time += 1
+                        correlaton = (2*math.pi-agent.usv)**(-agent.isd*agent.search_time)
+                        correlaton += agent.usv
+                        rand = np.random.normal(loc=0,scale=correlaton)
+                        angle1 = math.degrees(rand)
+                        agent.angle += angle1
+                        agent.action.u += np.array([math.sin(agent.angle),math.cos(agent.angle)])
+                    else:#agent.action_state == 4
                         #print("agent%d.state.p_pos:"%agent.i,agent.state.p_pos)
                         agent.action.u -= np.array([(agent.state.rep_pos[0]/np.linalg.norm(agent.state.rep_pos))
                                                    ,(agent.state.rep_pos[1]/np.linalg.norm(agent.state.rep_pos))])
