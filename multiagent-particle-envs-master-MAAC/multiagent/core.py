@@ -107,11 +107,16 @@ class Agent(Entity):
         self.action_state = 0
         self.angle = math.degrees(0)
         self.search_time = 0
-        self.switch_to_search = 0.5##probability of swithching to search 
-        self.return_nest = 0.5#Probability of returning to nest
-        self.rsf = 0.5#Rate of site fidelity
-        self.usv = 1#Uninformed search variation
-        self.isd = 1#Rate of informed search decay
+        self.resource_density = 0
+        self.updateFidelity = False
+        self.is_using_sitefidelity = False
+        self.site_fidelity = None
+        self.switch_to_search = 0.504##probability of swithching to search 
+        self.return_nest = 0.001#Probability of returning to nest
+        self.rsf = 4.27#Rate of site fidelity
+        self.usv = 7.0#Uninformed search variation
+        self.isd = 0.28#Rate of informed search decay
+        self.rlp = 3.75#Rate of laying pheromone
 
 # multi-agent world
 class World(object):
@@ -137,6 +142,9 @@ class World(object):
         self.cache_dists = False
         self.cached_dist_vect = None
         self.cached_dist_mag = None
+        self.pheromone_waypoints = None
+        self.rpd = 0.03#rate_of_pheromone_decay
+        self.t_i = 0
 
     # return all entities in the world
     @property

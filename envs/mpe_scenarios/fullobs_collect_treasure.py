@@ -2,6 +2,7 @@ import numpy as np
 import seaborn as sns
 from multiagent.core import World, Agent, Landmark, Wall
 from multiagent.scenario import BaseScenario
+import math
 
 class Scenario(BaseScenario):
     def make_world(self):
@@ -79,6 +80,14 @@ class Scenario(BaseScenario):
                         a.holding = l.type
                         a.color = 0.85 * l.color
                         l.state.p_pos = np.array([-999., -999.])
+                        #加入site fidelity和pheromone waypoints相关的判断添加
+                        a.resource_density = self.set_local_resource_density(l,world)
+                        #print("a.resouce:",a.resource_density)
+                        a.site_fidelity = np.zeros(world.dim_p)
+                        a.site_fidelity += a.state.p_pos
+                        #print("a.site_fidelity:",a.site_fidelity)
+                        a.is_using_sitefidelity = True
+                        a.updateFidelity = True
                         break
 
         for a in self.collectors(world):
@@ -89,9 +98,23 @@ class Scenario(BaseScenario):
                         a.color = np.array([0.85, 0.85, 0.85])
                         #a.state.p_pos = np.array([a.size*(2*a.i + 1) + 0.1,-0.1])
 
+    def set_local_resource_density(self,treasure,world):
+        c = 1
+        for l in world.landmarks:
+            if l.alive:
+                if((3*l.size) > world.cached_dist_mag[l.i, treasure.i]):
+                    print("dis:",3*l.size)
+                    print('world.dis:',world.cached_dist_mag[l.i, treasure.i])
+                    c += 1
+        return c
+
+
+
     def reset_world(self, world):
         print("forage_num:",world.forage_num)
         world.forage_num = 0
+        world.pheromone_waypoints = []
+
         # set random initial states
         for i, agent in enumerate(world.agents):
             #agent.state.p_pos = np.random.uniform(low=-1, high=1,

@@ -87,6 +87,9 @@ class MultiAgentEnv(gym.Env):
         reward_n = []
         done_n = []
         info_n = {'n': []}
+        self.world.t_i += 1
+        self.update_pheromone_list(self.world)
+        #print("self.world.pheromone_waypoints:",self.world.pheromone_waypoints)
         self.agents = self.world.policy_agents
         # set action for each agent
         #print("action_n:",action_n)
@@ -109,6 +112,15 @@ class MultiAgentEnv(gym.Env):
         if self.post_step_callback is not None:
             self.post_step_callback(self.world)
         return obs_n, reward_n, done_n, info_n
+
+    def update_pheromone_list(self,world):
+        for i in world.pheromone_waypoints:
+            weight = 1.0
+            weight *= math.exp(-world.rpd * (world.t_i-i[2]))
+            i[2] = world.t_i
+            if(weight <= 0.001):
+                world.pheromone_waypoints.remove(i)
+            weight = 1.0
 
     def _reset(self):
         # reset world
@@ -176,8 +188,39 @@ class MultiAgentEnv(gym.Env):
                             agent.recover = False
                 if(agent.holding == None):
                     agent.search_time = 0
-                    if(np.random.uniform(0,1) < agent.rsf):
-                        #先简单的写一个判断
+                    poissonCOF_playRate = self.get_poisson_CDF(agent.resource_density,agent.rlp)
+                    poissonCOF_sFollowRate = self.get_poisson_CDF(agent.resource_density,agent.rsf)
+                    #print("paly_rate:",poissonCOF_playRate)
+                    #print("poissonCOF_sFollowRate:",poissonCOF_sFollowRate)
+                    r1 = np.random.random()
+                    r2 = np.random.random()
+                    if (poissonCOF_playRate > r1 and agent.updateFidelity):
+                        #存放pheromone waypoints
+                        waypionts = []
+                        waypionts.append(agent.site_fidelity[0])
+                        waypionts.append(agent.site_fidelity[1])
+                        waypionts.append(self.world.t_i)
+                        self.world.pheromone_waypoints.append(waypionts)
+                        waypionts = []
+                        #print("pheromone_waypoints:",self.world.pheromone_waypoints)
+
+                    if(agent.updateFidelity and (poissonCOF_sFollowRate > r2)):
+                        #use site fidelity
+                        agent.state.rep_pos = np.zeros(self.world.dim_p)
+                        agent.state.rep_pos += agent.site_fidelity
+                        agent.action_state = 1
+                    elif(len(self.world.pheromone_waypoints) != 0):
+                        #use pheromone waypoints
+                        agent.state.rep_pos = np.zeros(self.world.dim_p)
+                        waypionts = []
+                        #print("self.world.pheromone_waypoints:",self.world.pheromone_waypoints)
+                        for pheromone_waypoints in self.world.pheromone_waypoints:
+                            if (pheromone_waypoints[2] > -1):
+                                waypionts = pheromone_waypoints[0:2]
+                        #print("waypionts:",waypionts)
+                        agent.state.rep_pos += waypionts
+                        waypionts = []
+                        #print("agent.state.rep_pos:",agent.state.rep_pos)
                         agent.action_state = 1
                     else:
                         agent.action_state = 0
@@ -191,6 +234,7 @@ class MultiAgentEnv(gym.Env):
             else:
                 #print("action[0]:",action[0][0])
                 #action[0]: [[ 0.  1.],[-1.  0.],[ 0. -1.],[ 1.  0.]]
+                agent.search_time += 1
                 if self.discrete_action_space:
                     #True
                     #print("agent.i:",agent.i)
@@ -237,6 +281,14 @@ class MultiAgentEnv(gym.Env):
 
         # make sure we used all elements of action
         assert len(action) == 0
+
+    def get_poisson_CDF(self,k,lambda1):
+        sumAccumulator = 1.0
+        factorialAccumulator = 1.0
+        for i in range(1,int(k)+1):
+            factorialAccumulator *= i
+            sumAccumulator += math.pow(lambda1,i)
+        return (math.exp(-lambda1) * sumAccumulator)
 
     # reset rendering assets
     def _reset_render(self):
