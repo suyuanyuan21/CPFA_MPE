@@ -92,9 +92,9 @@ class MultiAgentEnv(gym.Env):
         #print("self.world.pheromone_waypoints:",self.world.pheromone_waypoints)
         self.agents = self.world.policy_agents
         # set action for each agent
-        #print("action_n:",action_n)
         for i, agent in enumerate(self.agents):
-            self._set_action(action_n[i], agent, self.action_space[i])
+           # self._set_action(action_n[i], agent, self.action_space[i])
+            self._set_action(agent)
         # advance world state
         self.world.step()
         # record observation for each agent
@@ -160,14 +160,17 @@ class MultiAgentEnv(gym.Env):
         return self.reward_callback(agent, self.world)
 
     # set env action for a particular agent
-    def _set_action(self, action, agent, action_space, time=None):
+    def _set_action(self, agent, time=None):
         #print("action:",action)
         #action: [0. 0. 0. 1. 0.]
         agent.action.u = np.zeros(self.world.dim_p)
         #agent.action.u = array([0.,0.])
         agent.action.c = np.zeros(self.world.dim_c)
-        # process action
-        action = [action]
+        
+        if(agent.i == 2):
+            print("agent.i:",agent.i)
+            print("agent.action_state:",agent.action_state)
+            print("agent.p_pos:",agent.state.p_pos)
         #print("now_action:",action)
         #now_action: [array([0., 0., 0., 1., 0.], dtype=float32)]
 
@@ -176,18 +179,34 @@ class MultiAgentEnv(gym.Env):
                 if(np.random.uniform(0,1) < agent.switch_to_search):
                     agent.action_state = 2
             elif(agent.action_state == 1):#travel2
-                if(agent.recover == True):
+                if(agent.achieve_goal == True):
                     agent.action_state = 3
+                    agent.achieve_goal = False
+                    if (agent.is_using_sitefidelity == True):
+                        agent.is_using_sitefidelity = False
             elif(agent.action_state == 2 or agent.action_state == 3):#search1&2
-                if(agent.holding != None or np.random.uniform(0,1) < agent.return_nest):
+                if(agent.holding == None):#没拿到food
+                    if(np.random.uniform(0,1) < agent.return_nest):#随机放弃
+                        agent.is_using_sitefidelity = False
+                        agent.angle = math.degrees(0)
+                        agent.state.rep_pos = np.zeros(self.world.dim_p)
+                        agent.state.rep_pos += agent.state.p_pos
+                        agent.action_state = 4 
+                elif(agent.holding != None):#拿到food了
                     agent.action_state = 4
-            else:#return
-                if(agent.recover):
+                    agent.angle = math.degrees(0)
+                    agent.state.rep_pos = np.zeros(self.world.dim_p)
+                    agent.state.rep_pos += agent.state.p_pos
+                    #print("change agent.state.rep_pos:",agent.state.rep_pos)
+            elif(agent.action_state == 4):#return
+                '''
+                if(agent.holding != None):
                             agent.state.rep_pos = np.zeros(self.world.dim_p)
                             agent.state.rep_pos += agent.state.p_pos
-                            agent.recover = False
-                if(agent.holding == None):
+                '''
+                if(agent.holding == None):#返回nest了
                     agent.search_time = 0
+                    agent.achieve_goal = False
                     poissonCOF_playRate = self.get_poisson_CDF(agent.resource_density,agent.rlp)
                     poissonCOF_sFollowRate = self.get_poisson_CDF(agent.resource_density,agent.rsf)
                     #print("paly_rate:",poissonCOF_playRate)
@@ -208,6 +227,8 @@ class MultiAgentEnv(gym.Env):
                         #use site fidelity
                         agent.state.rep_pos = np.zeros(self.world.dim_p)
                         agent.state.rep_pos += agent.site_fidelity
+                        agent.state.start_pos = np.zeros(self.world.dim_p)
+                        agent.state.start_pos += agent.state.p_pos
                         agent.action_state = 1
                     elif(len(self.world.pheromone_waypoints) != 0):
                         #use pheromone waypoints
@@ -219,55 +240,74 @@ class MultiAgentEnv(gym.Env):
                                 waypionts = pheromone_waypoints[0:2]
                         #print("waypionts:",waypionts)
                         agent.state.rep_pos += waypionts
+                        #print("agent.state.rep_pos:",agent.state.rep_pos)
                         waypionts = []
                         #print("agent.state.rep_pos:",agent.state.rep_pos)
+                        agent.state.start_pos = np.zeros(self.world.dim_p)
+                        agent.state.start_pos += agent.state.p_pos
+                        agent.is_using_sitefidelity = False
                         agent.action_state = 1
                     else:
                         agent.action_state = 0
+                        agent.is_using_sitefidelity = False
                         agent.state.rep_pos = np.random.uniform(low=-1, high=1,
                                                     size=2)
             #print("agent_state:",agent.action_state)
-
             # physical action
             if self.discrete_action_input:
                 agent.action.u = np.zeros(self.world.dim_p)
             else:
-                #print("action[0]:",action[0][0])
-                #action[0]: [[ 0.  1.],[-1.  0.],[ 0. -1.],[ 1.  0.]]
-                agent.search_time += 1
                 if self.discrete_action_space:
                     #True
-                    #print("agent.i:",agent.i)
-                    if(agent.action_state == 0 or agent.action_state == 1):
-                        #agent.action.u += action[0][0]
-                        agent.action.u += np.array([(agent.state.rep_pos[0]/np.linalg.norm(agent.state.rep_pos))
-                                                   ,(agent.state.rep_pos[1]/np.linalg.norm(agent.state.rep_pos))])
-                        #print("agent.action.u:",agent.action.u) 
+                    if(agent.action_state == 0):
+                        if(agent.i == 2):
+                            print("here0")
+                        goal_pos = np.zeros(self.world.dim_p)
+                        goal_pos += agent.state.rep_pos
+                        agent.action.u += np.array([(goal_pos[0]/np.linalg.norm(goal_pos))
+                                                   ,(goal_pos[1]/np.linalg.norm(goal_pos))])
+                    elif(agent.action_state == 1):
+                        if(agent.i == 2):
+                            print("here1")
+                        goal_pos = np.zeros(self.world.dim_p)
+                        goal_pos = agent.state.rep_pos - agent.state.start_pos
+                        #print("agent.state.rep_pos:",agent.state.rep_pos)
+                        #print("agent.state.start_pos:",agent.state.start_pos)
+                        agent.action.u += np.array([(goal_pos[0]/np.linalg.norm(goal_pos))
+                                                   ,(goal_pos[1]/np.linalg.norm(goal_pos))])
+                        if (not agent.achieve_goal):
+                            if((math.fabs(agent.state.p_pos[0] - agent.state.rep_pos[0]) < agent.size) and 
+                               (math.fabs(agent.state.p_pos[1] - agent.state.rep_pos[1]) < agent.size)):
+                                agent.state.rep_pos = np.zeros(self.world.dim_p)
+                                agent.achieve_goal = True
                     elif (agent.holding == None and agent.action_state == 2):
+                        if(agent.i == 2):
+                            print("here2")
                         #search1--uninformed
                         rand = np.random.normal(loc=0,scale=agent.usv)#正态分布
                         angle1 = math.degrees(rand)
                         agent.angle += angle1
                         agent.action.u += np.array([math.sin(agent.angle),math.cos(agent.angle)])
                     elif (agent.holding == None and agent.action_state == 3):
+                        if(agent.i == 2):
+                            print("here3")
                         #search2--informed
                         agent.search_time += 1
-                        correlaton = (2*math.pi-agent.usv)**(-agent.isd*agent.search_time)
+                        correlaton = (2*math.pi-agent.usv)*math.exp(-agent.isd*agent.search_time)
                         correlaton += agent.usv
                         rand = np.random.normal(loc=0,scale=correlaton)
                         angle1 = math.degrees(rand)
                         agent.angle += angle1
                         agent.action.u += np.array([math.sin(agent.angle),math.cos(agent.angle)])
-                    else:#agent.action_state == 4
-                        #print("agent%d.state.p_pos:"%agent.i,agent.state.p_pos)
+                    elif(agent.holding != None and agent.action_state == 4):#agent.action_state == 4
+                        if(agent.i == 2):
+                            print("here4")
+                            print("agent%d.state.rep_pos:"%agent.i,agent.state.rep_pos)
                         agent.action.u -= np.array([(agent.state.rep_pos[0]/np.linalg.norm(agent.state.rep_pos))
                                                    ,(agent.state.rep_pos[1]/np.linalg.norm(agent.state.rep_pos))])
-
-                    
-                    #print("agent.action.u:",agent.action.u)
-                    #agent.action.u += action[0][0]
-                else:
-                    agent.action.u = action[0]
+            if(agent.i == 2):
+                print("agent.action.u:",agent.action.u)
+                print("agent.achieve_goal:",agent.achieve_goal)
             sensitivity = 5.0
             if agent.accel is not None:
                 #True
@@ -275,12 +315,6 @@ class MultiAgentEnv(gym.Env):
             #print("sensitivity:",sensitivity,"agent.action.u:",agent.action.u)
             agent.action.u *= sensitivity
             #print("new_agent.action.u:",agent.action.u)
-            action = action[1:]
-            #print("new_action:",action)
-            #new_action: []
-
-        # make sure we used all elements of action
-        assert len(action) == 0
 
     def get_poisson_CDF(self,k,lambda1):
         sumAccumulator = 1.0

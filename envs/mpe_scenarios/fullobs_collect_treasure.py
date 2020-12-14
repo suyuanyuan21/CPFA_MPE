@@ -96,7 +96,6 @@ class Scenario(BaseScenario):
                     if d.d_i == a.holding and self.is_collision(a, d, world):
                         a.holding = None
                         a.color = np.array([0.85, 0.85, 0.85])
-                        #a.state.p_pos = np.array([a.size*(2*a.i + 1) + 0.1,-0.1])
 
     def set_local_resource_density(self,treasure,world):
         c = 1
@@ -117,19 +116,17 @@ class Scenario(BaseScenario):
 
         # set random initial states
         for i, agent in enumerate(world.agents):
-            #agent.state.p_pos = np.random.uniform(low=-1, high=1,
-                                                  #size=world.dim_p)
             agent.state.rep_pos = np.random.uniform(low=-1, high=1,size=2)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
             agent.holding = None
             agent.angle = 0
             agent.action_state = 0
+            agent.is_using_sitefidelity = False
             if agent.collector:
                 agent.color = np.array([0.85, 0.85, 0.85])
                 agent.state.p_pos = np.random.uniform(low=-0.1, high=0.1,
                                                   size=world.dim_p)
-                #agent.state.p_pos = np.array([agent.size*(2*i + 1) + 0.1,-0.1])
                 #0.1 是deposit的size
             else:
                 agent.state.p_pos = np.array([0.0,0.0])

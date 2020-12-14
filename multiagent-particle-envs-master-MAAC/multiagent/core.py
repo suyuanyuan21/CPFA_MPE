@@ -8,6 +8,7 @@ class EntityState(object):
         # physical position p_pos = [0.0,0.0]
         self.p_pos = None
         self.rep_pos = None
+        self.start_pos = None
         # physical velocity p_vel = [0.0,0.0]
         self.p_vel = None
 
@@ -102,7 +103,7 @@ class Agent(Entity):
         self.action = Action()
         # script behavior to execute
         self.action_callback = None
-        self.recover = True
+        self.achieve_goal = False
         #agent行为的状态，0 and 1：向某一方向移动(0随机1信息)；2：无信息搜索；3：有信息搜索；4：返回nest
         self.action_state = 0
         self.angle = math.degrees(0)

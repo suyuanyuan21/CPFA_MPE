@@ -21,7 +21,7 @@ def run(config):
     attention_sac = AttentionSAC.init_from_save(model_path)
     env = make_env(config.env_id, discrete_action=attention_sac.discrete_action)
     attention_sac.prep_rollouts(device='cpu')
-    ifi = 10 / config.fps  # inter-frame interval
+    ifi = 3 / config.fps  # inter-frame interval
   
 
 
@@ -30,6 +30,8 @@ def run(config):
         obs = env.reset()
         env.render('human')
         for t_i in range(config.episode_length):
+            if (t_i % 100 ==0):
+                print("t_i:",t_i)
             calc_start = time.time()
             #print("iiiii:",t_i)
             action_space = np.array([[0.0,1.0],[-1.0,0.0],[0.0,-1.0],[1.0,0.0]])
